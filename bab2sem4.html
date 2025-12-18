@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eksperimen Interaktif: Pembuatan Sabun (Saponifikasi)</title>
+    <!-- Muat Tailwind CSS untuk penggayaan moden dan responsif -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Tetapan Font dan Latar Belakang */
+        body { font-family: 'Inter', sans-serif; background-color: #f0f4f8; }
+        
+        /* Gaya Item Radas (Dragable) */
+        .radas-item {
+            cursor: grab;
+            transition: transform 0.1s, box-shadow 0.1s;
+            /* Pastikan teks tidak dipilih semasa menyeret */
+            user-select: none; 
+        }
+        .dragging {
+            opacity: 0.6;
+            transform: scale(0.98);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Gaya Kotak Jatuhan (Drop Target) */
+        .drop-target {
+            min-height: 40px;
+            transition: background-color 0.2s, border-color 0.2s;
+        }
+        .drop-target.hover {
+            background-color: #d1f7e8; 
+            border-color: #059669;
+        }
+
+        /* Gaya untuk Rajah/Visual Eksperimen */
+        .rajah-visual {
+            min-height: 100px;
+            background-color: #f7f9fb;
+            border: 1px dashed #a0aec0;
+        }
+
+        /* Gaya Item Radas yang Sudah Digunakan */
+        .radas-item.used {
+            background-color: #e2e8f0 !important;
+            color: #718096 !important;
+            cursor: not-allowed;
+            text-decoration: line-through;
+        }
+
+        /* Gaya Modal dan Backdrop */
+        .modal {
+            transition: opacity 0.3s ease-in-out;
+        }
+        .modal-backdrop {
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="max-w-7xl mx-auto">
+        <h1 class="text-3xl md:text-4xl font-extrabold text-center text-indigo-700 mb-6 border-b-4 border-indigo-200 pb-2">
+            🔬 Simulasi Saponifikasi: Memahami Eksperimen Kimia
+        </h1>
+        <p class="text-center text-gray-600 mb-8 italic">Tujuan: Untuk menghasilkan sabun melalui proses saponifikasi.</p>
+
+        <!-- Kotak Mesej/Maklum Balas -->
+        <div id="message-area" class="hidden p-4 rounded-lg text-center mb-6 shadow-xl transition duration-300 font-semibold border-l-4"></div>
+
+        <div id="game-container" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <!-- KOLOM RADAS DAN BAHAN -->
+            <div id="radas-area" class="lg:col-span-1 bg-white p-6 rounded-xl shadow-2xl h-fit sticky top-4">
+                <h2 class="text-2xl font-bold mb-4 text-indigo-600 border-b pb-2">Radas & Bahan (Seret)</h2>
+                <div id="radas-list" class="space-y-3">
+                    <!-- Semua ID radas unik -->
+                    <div class="radas-item bg-teal-500 text-white p-3 rounded-lg shadow-md hover:bg-teal-600" id="radas-minyak-sawit" draggable="true">Minyak Sawit (10 cm³)</div>
+                    <div class="radas-item bg-teal-500 text-white p-3 rounded-lg shadow-md hover:bg-teal-600" id="radas-larutan-alkali" draggable="true">Larutan Natrium Hidroksida (50 cm³)</div>
+                    <div class="radas-item bg-teal-500 text-white p-3 rounded-lg shadow-md hover:bg-teal-600" id="radas-natrium-klorida" draggable="true">Pepejal Natrium Klorida</div>
+                    <div class="radas-item bg-teal-500 text-white p-3 rounded-lg shadow-md hover:bg-teal-600" id="radas-air-suling" draggable="true">Air Suling (50 cm³)</div>
+                    <div class="radas-item bg-teal-500 text-white p-3 rounded-lg shadow-md hover:bg-teal-600" id="radas-silinder-penyukat" draggable="true">Silinder Penyukat</div>
+                    <div class="radas-item bg-teal-500 text-white p-3 rounded-lg shadow-md hover:bg-teal-600" id="radas-bikar" draggable="true">Bikar (Besar)</div>
+                    <div class="radas-item bg-teal-500 text-white p-3 rounded-lg shadow-md hover:bg-teal-600" id="radas-pemanas" draggable="true">Penunu Bunsen / Pemanas</div>
+                    <div class="radas-item bg-teal-500 text-white p-3 rounded-lg shadow-md hover:bg-teal-600" id="radas-rod-kaca" draggable="true">Rod Kaca</div>
+                    <div class="radas-item bg-teal-500 text-white p-3 rounded-lg shadow-md hover:bg-teal-600" id="radas-corong-kertas" draggable="true">Corong Turas & Kertas Turas</div>
+                    <div class="radas-item bg-teal-500 text-white p-3 rounded-lg shadow-md hover:bg-teal-600" id="radas-tabung-uji" draggable="true">Tabung Uji</div>
+                    <div class="radas-item bg-teal-500 text-white p-3 rounded-lg shadow-md hover:bg-teal-600" id="radas-kertas-litmus" draggable="true">Kertas Litmus Merah & Biru</div>
+                </div>
+
+                <div class="mt-8 space-y-4 pt-4 border-t border-gray-200">
+                    <h3 class="font-bold text-lg text-indigo-600">Alat Bantuan AI:</h3>
+                    <button id="ask-ai-button" class="w-full flex items-center justify-center bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-4 rounded-lg shadow-md transition duration-300">
+                        <span class="mr-2">✨</span> Tanya Soalan Kimia
+                    </button>
+                    <button id="generate-conclusion-button" class="w-full flex items-center justify-center bg-pink-600 hover:bg-pink-700 text-white font-bold py-3 px-4 rounded-lg shadow-md transition duration-300" disabled>
+                        <span class="mr-2">✨</span> Jana Kesimpulan Automatik
+                    </button>
+                    <div id="conclusion-output" class="mt-4 p-3 bg-gray-100 border border-gray-300 rounded-lg hidden text-sm">
+                        <p class="font-bold text-gray-700 mb-1">Kesimpulan Dijana:</p>
+                        <p id="generated-text"></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- KOLOM PROSEDUR (DROP TARGETS) -->
+            <div id="prosedur-area" class="lg:col-span-2 bg-gray-50 p-6 rounded-xl shadow-2xl space-y-8">
+                <h2 class="text-2xl font-bold mb-4 text-indigo-600 border-b pb-2">Prosedur Eksperimen Saponifikasi</h2>
+
+                <!-- Langkah 1 & 2: Sukatan dan Tuang (Rajah a) -->
+                <div class="prosedur-step p-5 border-4 border-indigo-300 rounded-xl bg-white shadow-lg" data-step-id="step-1-2" data-step-text="Campurkan 10 cm³ minyak sawit dengan 50 cm³ larutan natrium hidroksida pekat dalam bikar.">
+                    <p class="font-bold text-xl mb-2 text-indigo-800">Langkah 1 & 2: Campuran Pemanasan</p>
+                    <p class="text-gray-700 mb-2">10 cm³ minyak sawit disukat dan 50 cm³ larutan natrium hidroksida (alkali) dituangkan ke dalam bikar.</p>
+                    <div class="rajah-visual p-2 mb-3 rounded-lg text-center">
+                        
+                        <p class="text-sm mt-1 italic">Pemerhatian 2: Tiada perubahan ketara.</p>
+                    </div>
+                    <div class="drop-target border-2 border-dashed border-indigo-400 p-3 rounded-md bg-indigo-50 text-indigo-600 font-medium" data-correct-item="radas-minyak-sawit radas-larutan-alkali radas-silinder-penyukat radas-bikar">Jatuhkan Bahan Utama di sini (4 item diperlukan)</div>
+                    <div class="dropped-items mt-3 flex flex-wrap gap-2"></div>
+                </div>
+
+                <!-- Langkah 3: Kacau dan Didihkan (Rajah b) -->
+                <div class="prosedur-step p-5 border-4 border-indigo-300 rounded-xl bg-white shadow-lg" data-step-id="step-3" data-step-text="Kacau dan didihkan campuran minyak dan alkali selama 5 minit.">
+                    <p class="font-bold text-xl mb-2 text-indigo-800">Langkah 3: Pemanasan (Hidrolisis Alkali)</p>
+                    <p class="text-gray-700 mb-2">Campuran dikacau dan dididihkan selama 5 minit.</p>
+                    <div class="rajah-visual p-2 mb-3 rounded-lg text-center">
+                        
+                        <p class="text-sm mt-1 italic">Pemerhatian 3: Banyak buih terbentuk.</p>
+                    </div>
+                    <div class="drop-target border-2 border-dashed border-indigo-400 p-3 rounded-md bg-indigo-50 text-indigo-600 font-medium" data-correct-item="radas-pemanas radas-rod-kaca">Jatuhkan Alat Pemanasan dan Kacau di sini (2 item diperlukan)</div>
+                    <div class="dropped-items mt-3 flex flex-wrap gap-2"></div>
+                </div>
+                
+                <!-- Langkah 4: Penggaraman Keluar (Rajah c) -->
+                <div class="prosedur-step p-5 border-4 border-indigo-300 rounded-xl bg-white shadow-lg" data-step-id="step-4" data-step-text="Tambahkan 50 cm³ air suling dan natrium klorida (garam) ke dalam larutan panas.">
+                    <p class="font-bold text-xl mb-2 text-indigo-800">Langkah 4: Penggaraman Keluar (Salting Out)</p>
+                    <p class="text-gray-700 mb-2">Pemanasan dihentikan. 50 cm³ air suling serta natrium klorida (garam) dituang ke dalam larutan.</p>
+                    <div class="rajah-visual p-2 mb-3 rounded-lg text-center">
+                        
+                        <p class="text-sm mt-1 italic">Pemerhatian 4: Pepejal putih (sabun) mula terbentuk/mendak.</p>
+                    </div>
+                    <div class="drop-target border-2 border-dashed border-indigo-400 p-3 rounded-md bg-indigo-50 text-indigo-600 font-medium" data-correct-item="radas-air-suling radas-natrium-klorida">Jatuhkan Bahan Penggaram di sini (2 item diperlukan)</div>
+                    <div class="dropped-items mt-3 flex flex-wrap gap-2"></div>
+                </div>
+
+                <!-- Langkah 5: Kacau dan Didihkan Semula (Rajah d) -->
+                <div class="prosedur-step p-5 border-4 border-indigo-300 rounded-xl bg-white shadow-lg" data-step-id="step-5" data-step-text="Kacau dan didihkan semula campuran garam dan larutan saponifikasi selama 5 minit.">
+                    <p class="font-bold text-xl mb-2 text-indigo-800">Langkah 5: Pemanasan Semula</p>
+                    <p class="text-gray-700 mb-2">Campuran dikacau dan dididihkan sekali lagi selama 5 minit.</p>
+                    <div class="rajah-visual p-2 mb-3 rounded-lg text-center">
+                        
+                    </div>
+                    <div class="drop-target border-2 border-dashed border-indigo-400 p-3 rounded-md bg-indigo-50 text-indigo-600 font-medium" data-correct-item="radas-pemanas radas-rod-kaca">Jatuhkan Alat Pemanasan dan Kacau di sini (2 item diperlukan)</div>
+                    <div class="dropped-items mt-3 flex flex-wrap gap-2"></div>
+                </div>
+
+                <!-- Langkah 6 & 7: Penurasan, Bilas, Keringkan (Rajah e) -->
+                <div class="prosedur-step p-5 border-4 border-indigo-300 rounded-xl bg-white shadow-lg" data-step-id="step-6-7" data-step-text="Turas hasil campuran untuk mengasingkan pepejal sabun. Bilas baki turasan dengan air suling dan keringkan.">
+                    <p class="font-bold text-xl mb-2 text-indigo-800">Langkah 6 & 7: Pengasingan Hasil</p>
+                    <p class="text-gray-700 mb-2">Hasil campuran dituras, dibilas dengan air suling, dan dikeringkan (untuk mendapatkan sabun murni).</p>
+                    <div class="rajah-visual p-2 mb-3 rounded-lg text-center">
+                        
+                    </div>
+                    <div class="drop-target border-2 border-dashed border-indigo-400 p-3 rounded-md bg-indigo-50 text-indigo-600 font-medium" data-correct-item="radas-corong-kertas radas-air-suling">Jatuhkan Alat Penurasan dan Pembilas di sini (2 item diperlukan)</div>
+                    <div class="dropped-items mt-3 flex flex-wrap gap-2"></div>
+                </div>
+
+                <!-- Langkah 8: Ujian Pembuihan (Rajah f) -->
+                <div class="prosedur-step p-5 border-4 border-indigo-300 rounded-xl bg-white shadow-lg" data-step-id="step-8" data-step-text="Goncang sabun kering dengan sedikit air di dalam tabung uji untuk menguji pembuihan dan sifat licin.">
+                    <p class="font-bold text-xl mb-2 text-indigo-800">Langkah 8: Ujian Pembuihan Sabun</p>
+                    <p class="text-gray-700 mb-2">Baki turasan yang kering digoncang dengan sedikit air di dalam tabung uji. Sifatnya diperhati.</p>
+                    <div class="rajah-visual p-2 mb-3 rounded-lg text-center">
+                        
+                        <p class="text-sm mt-1 italic">Pemerhatian 8: Bahan licin dan membentuk buih.</p>
+                    </div>
+                    <div class="drop-target border-2 border-dashed border-indigo-400 p-3 rounded-md bg-indigo-50 text-indigo-600 font-medium" data-correct-item="radas-tabung-uji radas-air-suling">Jatuhkan Alat Ujian di sini (2 item diperlukan)</div>
+                    <div class="dropped-items mt-3 flex flex-wrap gap-2"></div>
+                </div>
+
+                <!-- Langkah 9: Ujian pH (Kertas Litmus) -->
+                <div class="prosedur-step p-5 border-4 border-indigo-300 rounded-xl bg-white shadow-lg" data-step-id="step-9" data-step-text="Uji campuran sabun dan air dengan kertas litmus merah dan biru.">
+                    <p class="font-bold text-xl mb-2 text-indigo-800">Langkah 9: Ujian Sifat Kimia</p>
+                    <p class="text-gray-700 mb-2">Campuran sabun dan air diuji dengan kertas litmus merah dan biru.</p>
+                    <div class="rajah-visual p-2 mb-3 rounded-lg text-center">
+                        
+                        <p class="text-sm mt-1 italic">Pemerhatian 9: Kertas litmus merah bertukar biru (Alkali).</p>
+                    </div>
+                    <div class="drop-target border-2 border-dashed border-indigo-400 p-3 rounded-md bg-indigo-50 text-indigo-600 font-medium" data-correct-item="radas-kertas-litmus">Jatuhkan Alat Ujian pH di sini (1 item diperlukan)</div>
+                    <div class="dropped-items mt-3 flex flex-wrap gap-2"></div>
+                </div>
+
+            </div>
+        </div>
+        
+        <button id="reset-button" class="mt-8 mx-auto block bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-6 rounded-lg shadow-xl transition duration-300">
+            Mula Semula Eksperimen
+        </button>
+    </div>
+
+    <!-- Modal untuk Tanya Soalan Kimia -->
+    <div id="ai-modal" class="modal fixed inset-0 z-50 flex items-center justify-center p-4 hidden opacity-0">
+        <div class="modal-backdrop fixed inset-0"></div>
+        <div class="bg-white rounded-xl p-6 shadow-2xl z-10 w-full max-w-lg transform transition-all duration-300 scale-95">
+            <h3 class="text-2xl font-bold mb-4 text-purple-700 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-6 h-6 mr-2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m3.75 13.5 10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z" />
+                </svg>
+                Tanya Profesor Kimia AI
+            </h3>
+            <textarea id="ai-question-input" rows="3" placeholder="Contoh: Mengapakah natrium klorida ditambah dalam langkah 4?" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500 mb-4"></textarea>
+            
+            <button id="submit-ai-question" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 rounded-lg transition duration-300 mb-4">
+                Jana Jawapan
+            </button>
+            
+            <div id="ai-response-area" class="p-3 bg-gray-100 border border-gray-300 rounded-lg min-h-20 text-gray-700">
+                <p id="ai-response-text">Jawapan akan dipaparkan di sini...</p>
+            </div>
+            
+            <button id="close-modal" class="mt-4 w-full text-gray-600 hover:text-gray-900 font-semibold py-2 rounded-lg border border-gray-300">Tutup</button>
+        </div>
+    </div>
+
+    <script>
+        // Set Firebase config and constants
+        const apiKey = ""; 
+        const API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=" + apiKey;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Dapatkan semua elemen yang diperlukan
+            const radasItems = document.querySelectorAll('.radas-item');
+            const dropTargets = document.querySelectorAll('.drop-target');
+            const messageArea = document.getElementById('message-area');
+            const resetButton = document.getElementById('reset-button');
+            const generateConclusionButton = document.getElementById('generate-conclusion-button');
+            const conclusionOutput = document.getElementById('conclusion-output');
+            const generatedText = document.getElementById('generated-text');
+            
+            // Elemen Modal AI
+            const aiModal = document.getElementById('ai-modal');
+            const askAiButton = document.getElementById('ask-ai-button');
+            const closeModalButton = document.getElementById('close-modal');
+            const submitAiQuestionButton = document.getElementById('submit-ai-question');
+            const aiQuestionInput = document.getElementById('ai-question-input');
+            const aiResponseText = document.getElementById('ai-response-text');
+
+            let draggedItem = null;
+            let currentProcedures = []; // Untuk menyimpan teks prosedur yang telah dilengkapkan
+            
+            // ===============================================
+            // === OBJEK HURAIAN TERPERINCI (PENTING) ===
+            // ===============================================
+            const explanations = {
+                // Huraian untuk Jawapan BETUL (Mengapa ia diperlukan dalam langkah ini)
+                'correct': {
+                    'step-1-2': "Minyak sawit (ester) dan Larutan Natrium Hidroksida (alkali) adalah **reaktan utama** dalam tindak balas hidrolisis alkali (saponifikasi). Silinder Penyukat dan Bikar digunakan untuk **menyukat** dan **mencampur** reaktan sebelum proses pemanasan. Tanpa radas ini, tindak balas asas tidak boleh dimulakan.",
+                    'step-3': "Penunu Bunsen / Pemanas digunakan untuk **memanaskan** dan **mendidihkan** campuran. Haba membekalkan tenaga pengaktifan dan mempercepatkan tindak balas hidrolisis alkali. Rod Kaca digunakan untuk **mengacau** campuran bagi memastikan tindak balas lengkap dan pengagihan haba yang sekata. Tanpa radas ini, tindak balas akan menjadi sangat perlahan atau tidak lengkap.",
+                    'step-4': "Pepejal Natrium Klorida (garam biasa) ditambah dalam proses **'penggaraman keluar' (salting out)**, di mana ia mengurangkan keterlarutan sabun dalam larutan, menyebabkan sabun mendak sebagai pepejal. Air Suling digunakan untuk **melarutkan** natrium klorida sebelum dituangkan, memastikan ia diedarkan dengan baik untuk mendakkan sabun. Tanpa bahan ini, sabun akan kekal larut di dalam larutan.",
+                    'step-5': "Pemanasan semula dan kacauan pada Langkah 5 adalah untuk memastikan proses **penggaraman keluar berlaku sepenuhnya** dan semua molekul sabun berjaya diasingkan. Pemanasan membantu melarutkan sisa garam sepenuhnya, manakala kacauan memastikan sabun terapung ke permukaan sebelum fasa penurasan. Tanpa ini, hasil sabun mungkin berkurang.",
+                    'step-6-7': "Corong Turas & Kertas Turas digunakan untuk **mengasingkan pepejal sabun** dari hasil sampingan (gliserol, air, dan alkali berlebihan) melalui proses turasan. Air Suling digunakan untuk **membilas** baki turasan (sabun) untuk mendapatkan sabun yang lebih tulen. Tanpa radas ini, sabun akan tercemar.",
+                    'step-8': "Tabung Uji digunakan sebagai bekas untuk **menggoncang** sabun kering dengan sedikit Air Suling untuk **menguji sifat detergen** sabun (keupayaan membentuk buih) dan rasa licinnya. Ujian ini mengesahkan sabun telah dihasilkan. Tanpa radas ini, ujian fungsi tidak boleh dijalankan.",
+                    'step-9': "Kertas Litmus Merah & Biru adalah **penunjuk pH**. Ia digunakan untuk **menguji sifat kimia** sabun. Sabun terhasil adalah garam natrium asid karboksilik, yang mengalami hidrolisis dan sepatutnya bersifat alkali (pH > 7), ditunjukkan oleh kertas litmus merah bertukar biru. Tanpa alat ini, sifat kimia sabun tidak dapat disahkan."
+                },
+
+                // Huraian untuk Jawapan SALAH (Mengapa ia tidak sesuai diletakkan di sini)
+                'wrong': {
+                    'radas-pemanas': {
+                        'step-1-2': "Penunu Bunsen/Pemanas digunakan untuk pemanasan. Langkah 1 & 2 hanya melibatkan **sukatan dan pencampuran** reaktan. Pemanasan terlalu awal tidak diperlukan dan boleh menyebabkan larutan Natrium Hidroksida mendidih terlalu cepat, menyebabkan kehilangan reaktan.",
+                        'step-4': "Pemanasan perlu **dihentikan** pada Langkah 4. Langkah ini adalah fasa 'penggaraman keluar' yang memerlukan penambahan garam dan penyejukan larutan untuk memaksimumkan pendakan sabun. Haba akan menghalang pendakan sabun.",
+                        'step-6-7': "Langkah ini adalah fasa **penurasan**. Pemanasan tidak diperlukan dan boleh merosakkan kertas turas atau melarutkan sabun yang telah mendak semula, mengganggu proses pengasingan.",
+                        'step-8': "Langkah 8 adalah **ujian pembuihan** di dalam tabung uji. Pemanas tidak diperlukan dan boleh merosakkan sabun yang telah dikeringkan atau memecahkan tabung uji.",
+                        'step-9': "Langkah 9 adalah **ujian pH** dengan kertas litmus. Pemanas tidak diperlukan."
+                    },
+                    'radas-minyak-sawit': {
+                        'step-3': "Minyak sawit telah ditambah sepenuhnya pada langkah sebelumnya sebagai **reaktan awal**. Langkah 3 hanya memerlukan peralatan **pemanasan dan kacauan** untuk membolehkan tindak balas berlaku.",
+                        'step-4': "Langkah 4 adalah **penambahan bahan penggaram** (garam) dan air suling, bukan penambahan reaktan utama (minyak sawit) lagi. Menambah lebih banyak minyak boleh mengubah nisbah stoikiometri.",
+                        'step-6-7': "Minyak sawit adalah **reaktan awal**, bukan peralatan penurasan atau pembilasan. Radas ini sudah tidak diperlukan.",
+                        'step-8': "Minyak sawit adalah bahan mentah, bukan alat ujian. Tabung uji diperlukan untuk menguji sabun yang terhasil.",
+                        'step-9': "Minyak sawit tidak diperlukan untuk **ujian pH**.",
+                    },
+                    'radas-natrium-klorida': {
+                        'step-1-2': "Natrium klorida digunakan pada Langkah 4 untuk **penggaraman keluar** (mendakkan sabun). Jika ditambah pada fasa pencampuran reaktan awal, ia akan mengganggu proses hidrolisis alkali.",
+                        'step-3': "Natrium klorida berfungsi **mendakkan sabun**. Ia tidak sesuai ditambah semasa fasa pemanasan awal hidrolisis, kerana sabun belum terbentuk sepenuhnya dan garam akan menghalang tindak balas.",
+                        'step-5': "Natrium klorida telah ditambah pada Langkah 4. Menambahnya semula pada Langkah 5 adalah **berlebihan** dan tidak perlu, kerana sabun sepatutnya sudah mendak.",
+                        'step-8': "Natrium klorida adalah garam, bukan alat ujian. Ia tidak berfungsi sebagai alat untuk ujian pembuihan.",
+                        'step-9': "Natrium klorida tidak diperlukan untuk **ujian pH**.",
+                    },
+                    'radas-kertas-litmus': {
+                        'step-1-2': "Kertas litmus adalah untuk **ujian pH** pada Langkah 9, bukan untuk penyukatan atau pencampuran reaktan awal. Menguji pH di peringkat awal hanya akan mengesahkan larutan alkali.",
+                        'step-3': "Kertas litmus tidak tahan haba pemanasan dan tidak berkaitan dengan proses hidrolisis alkali.",
+                        'step-4': "Kertas litmus tidak digunakan untuk **penggaraman keluar**.",
+                        // ... dan seterusnya untuk item lain yang tiada huraian spesifik
+                    }
+                }
+            };
+            // ===============================================
+
+            // --- FUNGSI DRAG (SERET) ---
+            radasItems.forEach(item => {
+                item.addEventListener('dragstart', (e) => {
+                    draggedItem = item;
+                    item.classList.add('dragging');
+                    e.dataTransfer.setData('text/plain', item.id);
+                });
+
+                item.addEventListener('dragend', () => {
+                    item.classList.remove('dragging');
+                    draggedItem = null;
+                });
+            });
+
+            // --- FUNGSI DROP (JATUHAN) ---
+            dropTargets.forEach(target => {
+                target.addEventListener('dragover', (e) => {
+                    e.preventDefault(); 
+                    if (!target.classList.contains('step-complete')) {
+                        target.classList.add('hover');
+                    }
+                });
+
+                target.addEventListener('dragleave', () => {
+                    target.classList.remove('hover');
+                });
+
+                target.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    target.classList.remove('hover');
+                    
+                    if (target.classList.contains('step-complete')) return; 
+
+                    const radasId = e.dataTransfer.getData('text/plain');
+                    const stepElement = target.closest('.prosedur-step');
+                    
+                    let correctIdsString = stepElement.querySelector('.drop-target').getAttribute('data-correct-item');
+                    const correctIds = correctIdsString ? correctIdsString.split(' ').filter(id => id.trim() !== '') : [];
+                    
+                    handleDrop(radasId, target, correctIds, stepElement);
+                });
+            });
+
+            // --- LOGIK PEMERIKSAAN JAWAPAN DENGAN HURAIAN JELAS ---
+            function handleDrop(radasId, dropTarget, correctIds, stepElement) {
+                const radasElement = document.getElementById(radasId);
+                const stepId = stepElement.getAttribute('data-step-id');
+                
+                if (radasElement.classList.contains('used')) {
+                    showMessage('Item ini sudah digunakan. Radas/Bahan hanya perlu digunakan sekali.', 'bg-yellow-100 text-yellow-700 border-yellow-400');
+                    return;
+                }
+
+                if (correctIds.includes(radasId)) {
+                    // Jawapan BETUL
+                    
+                    // 1. Pindahkan visual item yang dijatuhkan (ke div .dropped-items)
+                    const droppedVisual = document.createElement('span');
+                    droppedVisual.classList.add('dropped-item', 'bg-green-600', 'text-white', 'p-2', 'rounded-full', 'shadow-sm', 'text-sm', 'font-medium');
+                    droppedVisual.textContent = radasElement.textContent;
+                    
+                    stepElement.querySelector('.dropped-items').appendChild(droppedVisual);
+                    
+                    // 2. Tandai item radas sebagai 'telah digunakan'
+                    radasElement.classList.add('used');
+                    radasElement.setAttribute('draggable', 'false');
+                    
+                    // 3. Beri maklum balas MENGAPA BETUL
+                    const explanation = explanations.correct[stepId] || 'Radas ini betul dan diperlukan untuk menjalankan tindak balas/prosedur langkah ini.';
+                    
+                    const messageContent = `
+                        ✅ **BETUL!** ${radasElement.textContent} adalah sesuai. 
+                        <br><br>
+                        <span class="font-bold text-green-700">MENGAPA BETUL:</span>
+                        <span class="text-sm font-normal">${explanation}</span>
+                    `;
+                    showMessage(messageContent, 'bg-green-100 text-gray-700 border-green-400');
+
+
+                    // 4. Keluarkan ID dari senarai yang betul yang tinggal
+                    let remainingIds = correctIds.filter(id => id !== radasId);
+                    stepElement.querySelector('.drop-target').setAttribute('data-correct-item', remainingIds.join(' '));
+
+                    // 5. Semak jika langkah selesai
+                    if (remainingIds.length === 0) {
+                        dropTarget.textContent = 'Langkah Lengkap! Semua radas telah diletakkan.';
+                        dropTarget.classList.remove('border-dashed', 'border-indigo-400', 'bg-indigo-50', 'text-indigo-600');
+                        dropTarget.classList.add('bg-green-200', 'border-green-500', 'text-green-800', 'step-complete');
+                        stepElement.classList.add('border-green-500'); 
+                        
+                        currentProcedures.push(stepElement.getAttribute('data-step-text'));
+                    }
+
+                } else {
+                    // Jawapan SALAH
+                    
+                    // 1. Dapatkan huraian salah yang spesifik
+                    let wrongExplanation = `Radas '${radasElement.textContent}' mempunyai fungsi yang berbeza. Cuba fikirkan apakah keperluan utama prosedur pada Langkah ${stepId.replace('step-', '').replace('-', ' dan ')}.`;
+
+                    if (explanations.wrong[radasId] && explanations.wrong[radasId][stepId]) {
+                        wrongExplanation = explanations.wrong[radasId][stepId];
+                    }
+
+                    // 2. Beri maklum balas MENGAPA SALAH
+                    const messageContent = `
+                        ❌ **SALAH.** ${radasElement.textContent} tidak sesuai di sini.
+                        <br><br>
+                        <span class="font-bold text-red-700">MENGAPA SALAH:</span>
+                        <span class="text-sm font-normal">${wrongExplanation}</span>
+                    `;
+                    showMessage(messageContent, 'bg-red-100 text-gray-700 border-red-400');
+                }
+                checkGameStatus();
+            }
+
+            // --- FUNGSI PAPARAN MESEJ ---
+            function showMessage(message, classes) {
+                messageArea.innerHTML = message; // Guna innerHTML untuk paparan <br> dan <span> dan bold
+                messageArea.className = 'p-4 rounded-lg text-left mb-6 shadow-xl font-semibold border-l-4 ' + classes; 
+                messageArea.style.display = 'block';
+                
+                // Sembunyikan selepas 8 saat (lebih lama untuk huraian panjang)
+                setTimeout(() => {
+                    messageArea.style.display = 'none';
+                }, 8000);
+            }
+
+            // --- SEMAK STATUS PERMAINAN KESELURUHAN ---
+            function checkGameStatus() {
+                const steps = document.querySelectorAll('.prosedur-step');
+                let allCompleted = true;
+
+                steps.forEach(step => {
+                    const remainingIdsString = step.querySelector('.drop-target').getAttribute('data-correct-item');
+                    const remainingIds = remainingIdsString ? remainingIdsString.split(' ').filter(id => id.trim() !== '') : [];
+                    
+                    if (remainingIds.length > 0) {
+                        allCompleted = false;
+                    }
+                });
+
+                if (allCompleted) {
+                    showMessage('🎉 Tahniah! Anda telah mengesahkan semua langkah eksperimen saponifikasi. Anda kini faham tentang prosedur dan radas!', 'bg-blue-100 text-blue-700 border-blue-400');
+                    generateConclusionButton.disabled = false;
+                } else {
+                    generateConclusionButton.disabled = true;
+                }
+            }
+            
+            // Panggil pada permulaan untuk menyahaktifkan butang Kesimpulan
+            checkGameStatus(); 
+
+            // --- FUNGSI MULA SEMULA ---
+            resetButton.addEventListener('click', () => {
+                window.location.reload(); 
+            });
+
+            // ===========================================
+            // === FUNGSI GEMINI API (Jana Kesimpulan) ===
+            // ===========================================
+
+            generateConclusionButton.addEventListener('click', async () => {
+                const allSteps = Array.from(document.querySelectorAll('.prosedur-step'));
+                const completedSteps = allSteps.filter(step => step.querySelector('.drop-target').classList.contains('step-complete'));
+
+                if (completedSteps.length !== allSteps.length) {
+                    showMessage('Sila lengkapkan semua langkah eksperimen sebelum menjana kesimpulan.', 'bg-yellow-100 text-yellow-700 border-yellow-400');
+                    return;
+                }
+
+                generatedText.innerHTML = '<span class="text-indigo-500">Sedang menjana kesimpulan... Sila tunggu sebentar.</span>';
+                conclusionOutput.classList.remove('hidden');
+                generateConclusionButton.disabled = true;
+                generateConclusionButton.innerHTML = 'Memuatkan...';
+                
+                const procedureText = completedSteps.map(step => step.getAttribute('data-step-text')).join('; ');
+
+                const prompt = `Anda adalah seorang ahli kimia. Berdasarkan prosedur dan pemerhatian ini, tuliskan satu Kesimpulan eksperimen yang ringkas dan padat.
+                
+                Tujuan: Untuk menghasilkan sabun melalui proses saponifikasi.
+                Hipotesis: Apabila minyak sawit dengan larutan alkali dididihkan, sabun terhasil.
+                
+                Prosedur Utama: ${procedureText}
+                
+                Pemerhatian Utama: Pepejal putih terbentuk. Bahan licin dan membentuk buih apabila digoncang dengan air. Kertas litmus merah bertukar biru.
+                
+                Kesimpulan mesti merangkumi penemuan tentang: 1) Penghasilan sabun, dan 2) Sifat kimia sabun. Jawapan dalam Bahasa Melayu.`;
+
+                try {
+                    const payload = {
+                        contents: [{ parts: [{ text: prompt }] }],
+                        systemInstruction: { parts: [{ text: "Anda adalah pakar kimia. Berikan jawapan ringkas, terus kepada poin, dan bersifat akademik." }] },
+                    };
+
+                    const response = await fetchWithRetry(API_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    const result = await response.json();
+                    const text = result.candidates?.[0]?.content?.parts?.[0]?.text || "Gagal menjana kesimpulan. Sila cuba lagi.";
+                    
+                    generatedText.textContent = text;
+                    showMessage('✨ Kesimpulan berjaya dijana oleh AI!', 'bg-pink-100 text-pink-700 border-pink-400');
+                } catch (error) {
+                    console.error("Error generating conclusion:", error);
+                    generatedText.textContent = "Ralat semasa menghubungi Gemini API.";
+                } finally {
+                    generateConclusionButton.disabled = false;
+                    generateConclusionButton.innerHTML = '<span class="mr-2">✨</span> Jana Kesimpulan Automatik';
+                }
+            });
+
+            // ===========================================
+            // === FUNGSI GEMINI API (Tanya Soalan) ===
+            // ===========================================
+
+            askAiButton.addEventListener('click', () => {
+                // Tunjukkan modal dan tetapkan semula teks
+                aiModal.classList.remove('hidden');
+                setTimeout(() => aiModal.classList.add('opacity-100', 'scale-100'), 10);
+                aiResponseText.textContent = "Jawapan akan dipaparkan di sini...";
+                aiResponseText.classList.remove('text-red-600');
+            });
+
+            closeModalButton.addEventListener('click', () => {
+                aiModal.classList.remove('opacity-100', 'scale-100');
+                setTimeout(() => aiModal.classList.add('hidden'), 300);
+            });
+            
+            // Tutup modal apabila mengklik di luar
+            aiModal.querySelector('.modal-backdrop').addEventListener('click', () => {
+                closeModalButton.click();
+            });
+
+            submitAiQuestionButton.addEventListener('click', async () => {
+                const question = aiQuestionInput.value.trim();
+                if (!question) {
+                    aiResponseText.textContent = "Sila masukkan soalan anda terlebih dahulu.";
+                    return;
+                }
+
+                aiResponseText.innerHTML = '<span class="text-purple-500 animate-pulse">Profesor AI sedang mencari jawapan yang paling tepat...</span>';
+                submitAiQuestionButton.disabled = true;
+                submitAiQuestionButton.innerHTML = 'Menghantar...';
+                aiResponseText.classList.remove('text-red-600');
+
+
+                // System Prompt yang Diperbaiki untuk jawapan yang lebih menyeluruh dan tepat
+                const systemPrompt = "Anda adalah seorang Profesor Kimia yang pakar dalam tindak balas organik, khususnya saponifikasi. Jawab setiap soalan pelajar dengan menyeluruh, tepat, dan jelas. Pastikan jawapan berstruktur (jika perlu) dan mudah difahami oleh pelajar sekolah menengah. Gunakan maklumat daripada carian web untuk memastikan ketepatan fakta terkini. Gunakan Bahasa Melayu sepenuhnya.";
+                
+                try {
+                    const payload = {
+                        contents: [{ parts: [{ text: question }] }],
+                        tools: [{ "google_search": {} }], // Kekalkan Google Search untuk jawapan grounded
+                        systemInstruction: { parts: [{ text: systemPrompt }] },
+                    };
+
+                    const response = await fetchWithRetry(API_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    const result = await response.json();
+                    let text = "Maaf, saya menghadapi masalah teknikal untuk menjawab soalan anda. Sila cuba soalan yang berbeza atau semak semula rangkaian anda.";
+                    if (result.candidates?.[0]?.content?.parts?.[0]?.text) {
+                        text = result.candidates[0].content.parts[0].text;
+                    }
+                    
+                    aiResponseText.textContent = text;
+                } catch (error) {
+                    console.error("Error submitting AI question:", error);
+                    aiResponseText.textContent = "Ralat sambungan: Tidak dapat menghubungi Profesor AI. Sila semak konsol.";
+                    aiResponseText.classList.add('text-red-600');
+                } finally {
+                    submitAiQuestionButton.disabled = false;
+                    submitAiQuestionButton.innerHTML = 'Jana Jawapan';
+                }
+            });
+
+
+            // ===========================================
+            // === FUNGSI HELPER (Exponential Backoff) ===
+            // ===========================================
+            async function fetchWithRetry(url, options, retries = 3) {
+                for (let i = 0; i < retries; i++) {
+                    try {
+                        const response = await fetch(url, options);
+                        if (response.status === 429 && i < retries - 1) {
+                            const delay = Math.pow(2, i) * 1000 + Math.random() * 1000;
+                            await new Promise(resolve => setTimeout(resolve, delay));
+                            continue;
+                        }
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response;
+                    } catch (error) {
+                        if (i === retries - 1) throw error;
+                    }
+                }
+            }
+
+        });
+    </script>
+</body>
+</html>
